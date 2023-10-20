@@ -1,7 +1,19 @@
 const INDENT = "    ";
+const PAGE_SIZE = 20; // Number of lines in each page
+const SHOW_PAGE_NUMBERS = 5; // Number of page numbers to show in pagination
+
+// Globals
+let lines = [];
+let totalPages = 0;
 
 function showError(errorMsg) {
   errorMsg.classList.add("visible");
+
+  const loadJSONBtn = document.getElementById("load-json");
+  loadJSONBtn.disabled = false;
+
+  const loadingIndicator = document.getElementById("loading-indicator");
+  loadingIndicator.classList.add("hidden");
 }
 
 function hideError(errorMsg) {
@@ -27,8 +39,12 @@ async function loadJSONFile(file, errorMsg) {
     const data = JSON.parse(jsonString);
     const jsonViewer = showObject(data, file.name);
     const fileForm = document.querySelector(".file-form");
+
     fileForm.classList.add("hidden");
     jsonViewer.classList.remove("hidden");
+    if (totalPages > 1) {
+      showPagination();
+    }
   } catch (e) {
     console.log(e);
     showError(errorMsg);
@@ -36,111 +52,30 @@ async function loadJSONFile(file, errorMsg) {
   }
 }
 
-const MAX_BLOCKS = 3; // Number of content divs that exist at any given time
-const OTHER_BLOCKS = (MAX_BLOCKS - 1) / 2; // Number of content divs that exist on either side of the middle block
-const BLOCK_SIZE = 100; // Number of lines in each content div
-let lines = [];
-const contentBlocks = [];
-let currentMiddleBlock = Math.floor(MAX_BLOCKS / 2);
+function showPagination() {
+  const paginationContainer = document.querySelector(".pagination-container");
+  paginationContainer.classList.remove("hidden");
+}
+
+function registerPageListener(button, getNewPage) {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    const newPage = getNewPage();
+    renderPage(newPage);
+  });
+}
 
 function showObject(obj, filename) {
   const section = document.getElementById("json-viewer");
   const title = document.getElementById("filename");
   addText(title, filename);
 
-  for (let i = 0; i < MAX_BLOCKS; i++) {
-    const block = document.getElementById(`content-${i}`);
-    contentBlocks.push(block);
-    block.innerHTML = ""; // Clear block
-    block.style.setProperty("--block-index", i - 1);
-  }
-
   lines = buildLines(obj);
+  totalPages = Math.ceil(lines.length / PAGE_SIZE);
 
-  renderBlock(contentBlocks[currentMiddleBlock], 0);
-
-  // We do this so there's time for the browser to render the first block
-  setTimeout(() => {
-    setProperties(section);
-  }, 0);
-
-  setupScrollListener(section);
+  renderPage(0);
 
   return section;
-}
-
-const measureCanvas = document.getElementById("measure-canvas");
-const measureCtx = measureCanvas.getContext("2d");
-
-function setProperties(section) {
-  const firstLine = document.querySelector(".json-line");
-  const lineHeight = firstLine.getBoundingClientRect().height;
-  let maxLength = 0;
-  let longestLine = null;
-  for (let line of lines) {
-    const length = getLineLength(line);
-    if (length > maxLength) {
-      maxLength = length;
-      longestLine = line;
-    }
-  }
-
-  measureCtx.font = getComputedStyle(firstLine).font;
-  const minWidth = Math.ceil(measureCtx.measureText(longestLine.value).width);
-
-  section.style.setProperty("--min-line-width", `${minWidth}px`);
-  section.style.setProperty("--block-height", `${lineHeight * BLOCK_SIZE}px`);
-  section.style.setProperty(
-    "--object-height",
-    `${Math.ceil(lineHeight * lines.length)}px`
-  );
-
-  // Render next blocks
-  for (let i = 0; i < OTHER_BLOCKS && lines.length > BLOCK_SIZE * i; i++) {
-    const blockIdx = i + 1;
-    if (BLOCK_SIZE * blockIdx >= lines.length) break;
-    renderBlock(contentBlocks[currentMiddleBlock + blockIdx], blockIdx);
-  }
-}
-
-function setupScrollListener(section) {
-  const container = document.querySelector(".content-container");
-  document.addEventListener("scroll", () => {
-    const screenCenter =
-      window.scrollY - container.offsetTop + window.innerHeight / 2;
-    const blockHeight = parseFloat(
-      section.style.getPropertyValue("--block-height")
-    );
-    const centerBlockIdx = Math.floor(screenCenter / blockHeight);
-    updateBlocks(centerBlockIdx);
-  });
-}
-
-function updateBlocks(centerBlockIdx) {
-  const middleBlock = findMiddleBlock(centerBlockIdx);
-  if (middleBlock) {
-    currentMiddleBlock = contentBlocks.indexOf(middleBlock);
-  } else {
-    currentMiddleBlock = Math.floor(MAX_BLOCKS / 2);
-  }
-
-  const firstBlockIdx = (centerBlockIdx - OTHER_BLOCKS) % MAX_BLOCKS;
-  for (let i = 0; i < MAX_BLOCKS; i++) {
-    const blockIdx = (firstBlockIdx + i + MAX_BLOCKS) % MAX_BLOCKS; // add MAX_BLOCKS to make sure it's positive
-    const block = contentBlocks[blockIdx];
-    const newBlockIdx = centerBlockIdx + i - OTHER_BLOCKS;
-    if (block.style.getPropertyValue("--block-index") === newBlockIdx) continue;
-    renderBlock(block, newBlockIdx);
-  }
-}
-
-function findMiddleBlock(centerBlockIdx) {
-  for (let block of contentBlocks) {
-    if (block.style.getPropertyValue("--block-index") === centerBlockIdx) {
-      return block;
-    }
-  }
-  return null;
 }
 
 function buildLines(obj) {
@@ -165,15 +100,6 @@ function buildLines(obj) {
   return lines;
 }
 
-function getLineLength(line) {
-  let lineString = "";
-  if (line.indentation) lineString += INDENT.repeat(line.indentation);
-  if (line.key) lineString += line.key + ": ";
-  if (line.value) lineString += line.value;
-  if (line.bracket) lineString += line.bracket;
-  return lineString.length;
-}
-
 function newLine(indentation, key, value, isArray, bracket) {
   return {
     indentation,
@@ -184,17 +110,68 @@ function newLine(indentation, key, value, isArray, bracket) {
   };
 }
 
-function renderBlock(block, blockIdx) {
-  block.innerHTML = ""; // Clear block
-  block.style.setProperty("--block-index", blockIdx);
+function renderPage(pageIdx) {
+  const contentContainer = document.getElementById("content-container");
+  contentContainer.innerHTML = "";
 
-  if (blockIdx < 0) return;
-
-  const startIdx = blockIdx * BLOCK_SIZE;
-  const endIdx = Math.min((blockIdx + 1) * BLOCK_SIZE, lines.length);
+  const startIdx = pageIdx * PAGE_SIZE;
+  const endIdx = Math.min((pageIdx + 1) * PAGE_SIZE, lines.length);
 
   for (let i = startIdx; i < endIdx; i++) {
-    renderLine(lines[i], block);
+    renderLine(lines[i], contentContainer);
+  }
+
+  renderPagination(pageIdx);
+}
+
+function renderPagination(pageIdx) {
+  const paginationContainer = document.getElementById("pagination-container");
+  paginationContainer.innerHTML = "";
+
+  if (pageIdx > 0) {
+    createPageLink("«", 0, pageIdx, paginationContainer, true);
+    createPageLink("‹", pageIdx - 1, pageIdx, paginationContainer, true);
+  }
+
+  createPageLink(1, 0, pageIdx, paginationContainer);
+
+  const pagesInEachSide = Math.floor((SHOW_PAGE_NUMBERS - 1) / 2);
+  let startIdx = Math.max(0, pageIdx - pagesInEachSide);
+  if (totalPages - pageIdx < pagesInEachSide) {
+    startIdx = Math.max(0, totalPages - SHOW_PAGE_NUMBERS);
+  }
+  const lastIdx = Math.min(totalPages - 2, startIdx + SHOW_PAGE_NUMBERS - 1);
+
+  if (startIdx > 1) {
+    createElement("span", null, paginationContainer, "...");
+  }
+
+  for (let i = startIdx; i <= lastIdx; i++) {
+    if (i === 0) continue;
+    createPageLink(i + 1, i, pageIdx, paginationContainer);
+  }
+
+  if (lastIdx < totalPages - 2) {
+    createElement("span", null, paginationContainer, "...");
+  }
+
+  createPageLink(totalPages, totalPages - 1, pageIdx, paginationContainer);
+
+  if (pageIdx < totalPages - 1) {
+    createPageLink("›", pageIdx + 1, pageIdx, paginationContainer, true);
+    createPageLink("»", totalPages - 1, pageIdx, paginationContainer, true);
+  }
+}
+
+function createPageLink(text, pageIdx, currentPageIdx, parent, isSpecial) {
+  if (pageIdx === currentPageIdx) {
+    return createElement("span", null, parent, text);
+  } else {
+    const className = isSpecial ? "special" : null;
+    const link = createElement("a", className, parent, text);
+    link.href = `?page=${pageIdx + 1}`;
+    registerPageListener(link, () => pageIdx);
+    return link;
   }
 }
 
@@ -241,7 +218,7 @@ function objToLines(obj, isArray, indentation) {
     if (obj.hasOwnProperty(key)) {
       let value = obj[key];
 
-      if (typeof value === "object") {
+      if (value !== null && typeof value === "object") {
         const isNewArray = Array.isArray(value);
         lines.push(
           newLine(indentation, key, null, isArray, isNewArray ? "[" : null)
@@ -292,12 +269,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("upload-file-input");
   const loadJSONBtn = document.getElementById("load-json");
   const errorMsg = document.querySelector(".error-msg");
+  const loadingIndicator = document.getElementById("loading-indicator");
 
   fileInput.addEventListener("change", () => {
     hideError(errorMsg);
     if (fileInput.files.length === 0) {
       return;
     }
+    loadJSONBtn.disabled = true;
+    loadingIndicator.classList.remove("hidden");
     loadJSONFile(fileInput.files[0], errorMsg);
   });
 

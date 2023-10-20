@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JSON Tree Viewer - by Andrew Kurauchi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,7 +20,24 @@
         <h2>
           Simple JSON Viewer that runs completely on-client. No data exchange
         </h2>
-        <button id="load-json">Load JSON</button>
+        <button id="load-json">
+          <span id="loading-indicator" class="loading-indicator hidden"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="loading-icon"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+              />
+            </svg> </span
+          >Load JSON
+        </button>
         <input
           id="upload-file-input"
           class="hidden"
@@ -30,12 +48,11 @@
       </section>
       <section class="json-viewer hidden" id="json-viewer">
         <h2 class="filename" id="filename"></h2>
-        <div class="content-container">
-          <div class="content-block" id="content-0"></div>
-          <div class="content-block" id="content-1"></div>
-          <div class="content-block" id="content-2"></div>
-          <canvas id="measure-canvas"></canvas>
-        </div>
+        <div class="content-container" id="content-container"></div>
+        <div
+          id="pagination-container"
+          class="pagination-container hidden"
+        ></div>
       </section>
     </main>
   </body>
