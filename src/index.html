@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>JSON Tree Viewer - by Andrew Kurauchi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./index.js"></script>
+  </head>
+  <body>
+    <main>
+      <section class="file-form">
+        <h1>JSON Tree Viewer</h1>
+        <h2>
+          Simple JSON Viewer that runs completely on-client. No data exchange
+        </h2>
+        <button id="load-json">Load JSON</button>
+        <input
+          id="upload-file-input"
+          class="hidden"
+          type="file"
+          accept=".json"
+        />
+        <p class="error-msg">Invalid file. Please load a valid JSON file.</p>
+      </section>
+    </main>
+  </body>
+</html>

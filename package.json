@@ -1,0 +1,24 @@
+{
+  "name": "rinha-frontend",
+  "version": "1.0.0",
+  "description": "Solução para o desafio da Rinha de Frontend por Andrew Kurauchi",
+  "browserslist": "> 0.5%, last 2 versions, not dead",
+  "main": "index.js",
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build"
+  },
+  "devDependencies": {
+    "parcel": "latest"
+  },
+  "keywords": [
+    "rinha-frontend",
+    "parcel",
+    "javascript",
+    "css",
+    "html"
+  ],
+  "author": "Andrew Kurauchi",
+  "license": "ISC"
+}

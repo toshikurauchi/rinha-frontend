@@ -1,0 +1,110 @@
+:root {
+  --background-clr: #fff;
+  --accent-text-clr: #4e9590;
+  --dark-text-clr: #000;
+  --button-clr: linear-gradient(180deg, #e4e4e4 0%, #f7f7f7 100%);
+  --button-clr-hover: linear-gradient(180deg, #eaeaea 0%, #fdfdfd 100%);
+  --brackets-clr: #f2cab8;
+  --gray-clr: #bfbfbf;
+  --invalid-clr: #bf0e0e;
+}
+
+/* Global */
+body {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh; /* If supported, use dvh */
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+  line-height: 1.21041667;
+}
+
+section {
+  padding: 1em;
+}
+
+.file-form {
+  display: grid;
+  place-items: center;
+}
+
+h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+}
+
+/* Error message */
+.error-msg {
+  color: var(--invalid-clr);
+  display: none;
+}
+
+.error-msg.visible {
+  display: block;
+}
+
+/* Inputs */
+button {
+  padding: 0.375em 0.75em;
+  background: var(--button-clr);
+  border-radius: 5px;
+  border: 1px solid var(--dark-text-clr);
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+button:hover {
+  background: var(--button-clr-hover);
+}
+
+/* JSON viewer */
+.filename {
+  font-size: 2rem;
+}
+
+.content-container {
+  margin-top: 1em;
+}
+
+.json-line {
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.indent {
+  display: block;
+  margin: 0 0 0 0.1em;
+  border-left: 1px solid var(--gray-clr);
+  white-space: pre;
+  line-height: 1.765;
+}
+
+.content {
+  line-height: 1.765;
+}
+
+.json-key {
+  color: var(--accent-text-clr);
+}
+
+.json-key.array-idx {
+  color: var(--gray-clr);
+}
+
+.bracket {
+  color: var(--brackets-clr);
+  font-weight: 700;
+}
+
+.hidden {
+  display: none;
+}
