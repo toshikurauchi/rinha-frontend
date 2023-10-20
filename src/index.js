@@ -1,3 +1,5 @@
+const INDENT = "    ";
+
 function showError(errorMsg) {
   errorMsg.classList.add("visible");
 }
@@ -27,10 +29,6 @@ async function loadJSONFile(file, errorMsg) {
     const fileForm = document.querySelector(".file-form");
     fileForm.classList.add("hidden");
     jsonViewer.classList.remove("hidden");
-
-    document.addEventListener("scroll", () => {
-      renderLines();
-    });
   } catch (e) {
     console.log(e);
     showError(errorMsg);
@@ -38,33 +36,111 @@ async function loadJSONFile(file, errorMsg) {
   }
 }
 
-function getMaxScroll() {
-  return (
-    Math.max(
-      document.body.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.clientHeight,
-      document.documentElement.scrollHeight,
-      document.documentElement.offsetHeight
-    ) - window.innerHeight
-  );
-}
-
+const MAX_BLOCKS = 3; // Number of content divs that exist at any given time
+const OTHER_BLOCKS = (MAX_BLOCKS - 1) / 2; // Number of content divs that exist on either side of the middle block
+const BLOCK_SIZE = 100; // Number of lines in each content div
 let lines = [];
-let contentElement = null;
-let lastRenderedIndex = -1;
-function showObject(obj, filename) {
-  const main = document.getElementsByTagName("main")[0];
+const contentBlocks = [];
+let currentMiddleBlock = Math.floor(MAX_BLOCKS / 2);
 
-  const section = createElement("section", "json-viewer hidden", main);
-  createElement("h1", "filename", section, filename);
+function showObject(obj, filename) {
+  const section = document.getElementById("json-viewer");
+  const title = document.getElementById("filename");
+  addText(title, filename);
+
+  for (let i = 0; i < MAX_BLOCKS; i++) {
+    const block = document.getElementById(`content-${i}`);
+    contentBlocks.push(block);
+    block.innerHTML = ""; // Clear block
+    block.style.setProperty("--block-index", i - 1);
+  }
 
   lines = buildLines(obj);
-  contentElement = createElement("div", "content-container", section);
 
-  renderLines();
+  renderBlock(contentBlocks[currentMiddleBlock], 0);
+
+  // We do this so there's time for the browser to render the first block
+  setTimeout(() => {
+    setProperties(section);
+  }, 0);
+
+  setupScrollListener(section);
 
   return section;
+}
+
+const measureCanvas = document.getElementById("measure-canvas");
+const measureCtx = measureCanvas.getContext("2d");
+
+function setProperties(section) {
+  const firstLine = document.querySelector(".json-line");
+  const lineHeight = firstLine.getBoundingClientRect().height;
+  let maxLength = 0;
+  let longestLine = null;
+  for (let line of lines) {
+    const length = getLineLength(line);
+    if (length > maxLength) {
+      maxLength = length;
+      longestLine = line;
+    }
+  }
+
+  measureCtx.font = getComputedStyle(firstLine).font;
+  const minWidth = Math.ceil(measureCtx.measureText(longestLine.value).width);
+
+  section.style.setProperty("--min-line-width", `${minWidth}px`);
+  section.style.setProperty("--block-height", `${lineHeight * BLOCK_SIZE}px`);
+  section.style.setProperty(
+    "--object-height",
+    `${Math.ceil(lineHeight * lines.length)}px`
+  );
+
+  // Render next blocks
+  for (let i = 0; i < OTHER_BLOCKS && lines.length > BLOCK_SIZE * i; i++) {
+    const blockIdx = i + 1;
+    if (BLOCK_SIZE * blockIdx >= lines.length) break;
+    renderBlock(contentBlocks[currentMiddleBlock + blockIdx], blockIdx);
+  }
+}
+
+function setupScrollListener(section) {
+  const container = document.querySelector(".content-container");
+  document.addEventListener("scroll", () => {
+    const screenCenter =
+      window.scrollY - container.offsetTop + window.innerHeight / 2;
+    const blockHeight = parseFloat(
+      section.style.getPropertyValue("--block-height")
+    );
+    const centerBlockIdx = Math.floor(screenCenter / blockHeight);
+    updateBlocks(centerBlockIdx);
+  });
+}
+
+function updateBlocks(centerBlockIdx) {
+  const middleBlock = findMiddleBlock(centerBlockIdx);
+  if (middleBlock) {
+    currentMiddleBlock = contentBlocks.indexOf(middleBlock);
+  } else {
+    currentMiddleBlock = Math.floor(MAX_BLOCKS / 2);
+  }
+
+  const firstBlockIdx = (centerBlockIdx - OTHER_BLOCKS) % MAX_BLOCKS;
+  for (let i = 0; i < MAX_BLOCKS; i++) {
+    const blockIdx = (firstBlockIdx + i + MAX_BLOCKS) % MAX_BLOCKS; // add MAX_BLOCKS to make sure it's positive
+    const block = contentBlocks[blockIdx];
+    const newBlockIdx = centerBlockIdx + i - OTHER_BLOCKS;
+    if (block.style.getPropertyValue("--block-index") === newBlockIdx) continue;
+    renderBlock(block, newBlockIdx);
+  }
+}
+
+function findMiddleBlock(centerBlockIdx) {
+  for (let block of contentBlocks) {
+    if (block.style.getPropertyValue("--block-index") === centerBlockIdx) {
+      return block;
+    }
+  }
+  return null;
 }
 
 function buildLines(obj) {
@@ -89,6 +165,15 @@ function buildLines(obj) {
   return lines;
 }
 
+function getLineLength(line) {
+  let lineString = "";
+  if (line.indentation) lineString += INDENT.repeat(line.indentation);
+  if (line.key) lineString += line.key + ": ";
+  if (line.value) lineString += line.value;
+  if (line.bracket) lineString += line.bracket;
+  return lineString.length;
+}
+
 function newLine(indentation, key, value, isArray, bracket) {
   return {
     indentation,
@@ -99,34 +184,18 @@ function newLine(indentation, key, value, isArray, bracket) {
   };
 }
 
-function renderLines() {
-  setTimeout(() => {
-    renderNextLine();
-  }, 0);
-}
+function renderBlock(block, blockIdx) {
+  block.innerHTML = ""; // Clear block
+  block.style.setProperty("--block-index", blockIdx);
 
-const PRERENDER_FACTOR = 5; // How many full height screens to prerender
-const MAX_RENDER_LINES = 1000; // How many lines to render at once
-function renderNextLine() {
-  if (
-    !contentElement ||
-    !lines ||
-    !lines.length ||
-    lastRenderedIndex === lines.length - 1 ||
-    window.scrollY < getMaxScroll() - PRERENDER_FACTOR * window.innerHeight
-  )
-    return;
+  if (blockIdx < 0) return;
 
-  for (
-    let i = 0;
-    i < MAX_RENDER_LINES && lastRenderedIndex < lines.length - 1;
-    i++
-  ) {
-    lastRenderedIndex++;
-    renderLine(lines[lastRenderedIndex], contentElement);
+  const startIdx = blockIdx * BLOCK_SIZE;
+  const endIdx = Math.min((blockIdx + 1) * BLOCK_SIZE, lines.length);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    renderLine(lines[i], block);
   }
-
-  setTimeout(renderNextLine, 0);
 }
 
 function renderLine(line, contentElement) {
@@ -138,11 +207,13 @@ function renderLine(line, contentElement) {
   addKey(container, line.key, line.isArray);
   addValue(container, line.value);
   addBracket(container, line.bracket);
+
+  return lineElement;
 }
 
 function addIndentation(lineElement, indentation) {
   for (let i = 0; i < indentation; i++) {
-    createElement("span", "indent", lineElement, "    ");
+    createElement("span", "indent", lineElement, INDENT);
   }
 }
 
@@ -161,50 +232,6 @@ function addValue(lineElement, value) {
 function addBracket(lineElement, bracket) {
   if (!bracket) return;
   createElement("span", "bracket", lineElement, bracket);
-}
-
-function getBrackets(obj) {
-  if (Array.isArray(obj)) {
-    return [
-      true,
-      createElement("span", "bracket", null, "["),
-      createElement("span", "bracket", null, "]"),
-    ];
-  }
-  return [false, null, null];
-}
-
-function objToHTML(obj, isArray, parent) {
-  isArray = !!isArray; // Convert to boolean
-  const classList = [];
-  if (isArray) {
-    classList.push("array-idx");
-  }
-  const className = classList.join(" ");
-
-  for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      const value = obj[key];
-
-      const item = createElement("li", className, parent);
-      createElement("span", "obj-key", item, `${key}: `);
-      if (value === null) {
-        addText(item, "null");
-      } else if (typeof value === "object") {
-        const [isArray, openBracket, closeBracket] = getBrackets(value);
-
-        if (openBracket) item.appendChild(openBracket);
-        const contentElement = createElement("ul", null, item);
-        if (closeBracket) item.appendChild(closeBracket);
-
-        objToHTML(value, isArray, contentElement);
-      } else if (typeof value === "string") {
-        addText(item, `"${value}"`);
-      } else {
-        addText(item, value);
-      }
-    }
-  }
 }
 
 function objToLines(obj, isArray, indentation) {
@@ -239,10 +266,6 @@ function objToLines(obj, isArray, indentation) {
   }
 
   return lines;
-}
-
-function createLine(parent) {
-  return createElement("div", "json-line", parent);
 }
 
 function createElement(tagName, className, parent, text) {

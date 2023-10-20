@@ -12,8 +12,7 @@
 /* Global */
 body {
   margin: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
   min-height: 100vh;
   min-height: 100dvh; /* If supported, use dvh */
   font-family: "Inter", sans-serif;
@@ -21,13 +20,24 @@ body {
   line-height: 1.21041667;
 }
 
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+}
+
 section {
   padding: 1em;
+  flex-grow: 1;
 }
 
 .file-form {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 h1 {
@@ -65,13 +75,34 @@ button:hover {
   background: var(--button-clr-hover);
 }
 
+/* Measure canvas */
+#measure-canvas {
+  display: none;
+  width: 10000000px;
+}
+
 /* JSON viewer */
+.json-viewer {
+  display: flex;
+  flex-direction: column;
+}
+
 .filename {
   font-size: 2rem;
 }
 
 .content-container {
-  margin-top: 1em;
+  position: relative;
+  flex-grow: 1;
+  min-height: var(--object-height, 0);
+  white-space: nowrap;
+  min-width: var(--min-line-width, 0);
+}
+
+.content-block {
+  position: absolute;
+  left: 0;
+  top: calc(var(--block-height, 0) * var(--block-index, 0));
 }
 
 .json-line {
