@@ -6,7 +6,8 @@
   "source": "src/index.html",
   "targets": {
     "default": {
-      "distDir": "./docs"
+      "distDir": "./docs",
+      "publicUrl": "https://toshikurauchi.github.io/rinha-frontend/"
     }
   },
   "scripts": {
