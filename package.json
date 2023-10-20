@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Solução para o desafio da Rinha de Frontend por Andrew Kurauchi",
   "browserslist": "> 0.5%, last 2 versions, not dead",
-  "main": "index.js",
   "source": "src/index.html",
   "scripts": {
     "start": "parcel",
