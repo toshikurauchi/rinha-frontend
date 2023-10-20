@@ -4,6 +4,11 @@
   "description": "Solução para o desafio da Rinha de Frontend por Andrew Kurauchi",
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "source": "src/index.html",
+  "targets": {
+    "default": {
+      "distDir": "./docs"
+    }
+  },
   "scripts": {
     "start": "parcel",
     "build": "parcel build"
